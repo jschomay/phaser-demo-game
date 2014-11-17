@@ -3,6 +3,7 @@ var game = new Phaser.Game(800,600, Phaser.AUTO, 'phaser-demo', {preload: preloa
 var player;
 var starfield;
 var cursors;
+var bank;
 
 var ACCLERATION = 600;
 var DRAG = 400;
@@ -43,6 +44,11 @@ function update() {
     {
         player.body.acceleration.x = ACCLERATION;
     }
+
+    //  Squish and rotate ship for illusion of "banking"
+    bank = player.body.velocity.x / MAXSPEED;
+    player.scale.x = 1 - Math.abs(bank) / 2;
+    player.angle = bank * 10;
 }
 
 function render() {
