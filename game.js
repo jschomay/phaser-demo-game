@@ -18,6 +18,8 @@ function create() {
 }
 
 function update() {
+    //  Scroll the background
+    starfield.tilePosition.y += 2;
 
 }
 
