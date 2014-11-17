@@ -163,6 +163,11 @@ function launchGreenEnemy() {
         enemy.body.velocity.x = game.rnd.integerInRange(-300, 300);
         enemy.body.velocity.y = ENEMY_SPEED;
         enemy.body.drag.x = 100;
+
+        //  Update function for each enemy ship to update rotation etc
+        enemy.update = function(){
+          enemy.angle = 180 - game.math.radToDeg(Math.atan2(enemy.body.velocity.x, enemy.body.velocity.y));
+        }
     }
 
     //  Send another enemy soon
