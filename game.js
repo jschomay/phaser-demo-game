@@ -26,6 +26,7 @@ function preload() {
     game.load.image('bullet', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/bullet.png');
     game.load.image('enemy-green', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/enemy-green.png');
     game.load.spritesheet('explosion', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/explode.png', 128, 128);
+    game.load.bitmapFont('spacefont', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/spacefont/spacefont.png', 'https://rawgit.com/jschomay/phaser-demo-game/master/assets/spacefont/spacefont.xml');  
 }
 
 function create() {
@@ -104,21 +105,23 @@ function create() {
     });
 
     //  Shields stat
-    shields = game.add.text(game.world.width - 150, 10, 'Shields: ' + player.health +'%', { font: '20px Arial', fill: '#fff' });
+    shields = game.add.bitmapText(game.world.width - 250, 10, 'spacefont', '' + player.health +'%', 50);
     shields.render = function () {
         shields.text = 'Shields: ' + Math.max(player.health, 0) +'%';
     };
+    shields.render();
 
     //  Score
-    scoreText = game.add.text(10, 10, '', { font: '20px Arial', fill: '#fff' });
+    scoreText = game.add.bitmapText(10, 10, 'spacefont', '', 50);
     scoreText.render = function () {
         scoreText.text = 'Score: ' + score;
     };
     scoreText.render();
 
     //  Game over text
-    gameOver = game.add.text(game.world.centerX, game.world.centerY, 'GAME OVER!', { font: '84px Arial', fill: '#fff' });
-    gameOver.anchor.setTo(0.5, 0.5);
+    gameOver = game.add.bitmapText(game.world.centerX, game.world.centerY, 'spacefont', 'GAME OVER!', 110);
+    gameOver.x = gameOver.x - gameOver.textWidth / 2;
+    gameOver.y = gameOver.y - gameOver.textHeight / 3;
     gameOver.visible = false;
 }
 
