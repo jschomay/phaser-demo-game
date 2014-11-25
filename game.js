@@ -9,6 +9,7 @@ var cursors;
 var bank;
 var shipTrail;
 var explosions;
+var playerDeath;
 var bullets;
 var fireButton;
 var bulletTimer = 0;
@@ -140,6 +141,14 @@ function create() {
     explosions.forEach( function(explosion) {
         explosion.animations.add('explosion');
     });
+
+    //  Big explosion
+    playerDeath = game.add.emitter(player.x, player.y);
+    playerDeath.width = 50;
+    playerDeath.height = 50;
+    playerDeath.makeParticles('explosion', [0,1,2,3,4,5,6,7], 10);
+    playerDeath.setAlpha(0.9, 0, 800);
+    playerDeath.setScale(0.1, 0.6, 0.1, 0.6, 1000, Phaser.Easing.Quintic.Out);
 
     //  Shields stat
     shields = game.add.bitmapText(game.world.width - 250, 10, 'spacefont', '' + player.health +'%', 50);
@@ -408,15 +417,21 @@ function addEnemyEmitterTrail(enemy) {
 
 
 function shipCollide(player, enemy) {
-    var explosion = explosions.getFirstExists(false);
-    explosion.reset(enemy.body.x + enemy.body.halfWidth, enemy.body.y + enemy.body.halfHeight);
-    explosion.body.velocity.y = enemy.body.velocity.y;
-    explosion.alpha = 0.7;
-    explosion.play('explosion', 30, false, true);
     enemy.kill();
 
     player.damage(enemy.damageAmount);
     shields.render();
+
+    if (player.alive) {
+        var explosion = explosions.getFirstExists(false);
+        explosion.reset(player.body.x + player.body.halfWidth, player.body.y + player.body.halfHeight);
+        explosion.alpha = 0.7;
+        explosion.play('explosion', 30, false, true);
+    } else {
+        playerDeath.x = player.x;
+        playerDeath.y = player.y;
+        playerDeath.start(false, 1000, 10, 10);
+    }
 }
 
 
@@ -450,14 +465,21 @@ function hitEnemy(enemy, bullet) {
 }
 
 function enemyHitsPlayer (player, bullet) {
-    var explosion = explosions.getFirstExists(false);
-    explosion.reset(player.body.x + player.body.halfWidth, player.body.y + player.body.halfHeight);
-    explosion.alpha = 0.7;
-    explosion.play('explosion', 30, false, true);
     bullet.kill();
 
     player.damage(bullet.damageAmount);
     shields.render()
+
+    if (player.alive) {
+        var explosion = explosions.getFirstExists(false);
+        explosion.reset(player.body.x + player.body.halfWidth, player.body.y + player.body.halfHeight);
+        explosion.alpha = 0.7;
+        explosion.play('explosion', 30, false, true);
+    } else {
+        playerDeath.x = player.x;
+        playerDeath.y = player.y;
+        playerDeath.start(false, 1000, 10, 10);
+    }
 }
 
 
