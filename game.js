@@ -56,6 +56,7 @@ function create() {
     greenEnemies.setAll('angle', 180);
     greenEnemies.forEach(function(enemy){
         addEnemyEmitterTrail(enemy);
+        enemy.body.setSize(enemy.width * 3 / 4, enemy.height * 3 / 4);
         enemy.events.onKilled.add(function(){
             enemy.trail.kill();
         });
@@ -144,7 +145,11 @@ function update() {
 }
 
 function render() {
-
+    // for (var i = 0; i < greenEnemies.length; i++)
+    // {
+    //     game.debug.body(greenEnemies.children[i]);
+    // }
+    // game.debug.body(player);
 }
 
 function fireBullet() {
