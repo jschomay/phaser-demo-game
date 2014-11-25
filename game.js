@@ -4,6 +4,7 @@ var player;
 var starfield;
 var cursors;
 var bank;
+var shipTrail;
 
 var ACCLERATION = 600;
 var DRAG = 400;
@@ -12,6 +13,7 @@ var MAXSPEED = 400;
 function preload() {
     game.load.image('starfield', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/starfield.png');
     game.load.image('ship', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/player.png');
+    game.load.image('bullet', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/bullet.png');
 }
 
 function create() {
@@ -27,6 +29,17 @@ function create() {
 
     //  And some controls to play the game with
     cursors = game.input.keyboard.createCursorKeys();
+
+    //  Add an emitter for the ship's trail
+    shipTrail = game.add.emitter(player.x, player.y + 10, 400);
+    shipTrail.width = 10;
+    shipTrail.makeParticles('bullet');
+    shipTrail.setXSpeed(30, -30);
+    shipTrail.setYSpeed(200, 180);
+    shipTrail.setRotation(50,-50);
+    shipTrail.setAlpha(1, 0.01, 800);
+    shipTrail.setScale(0.05, 0.4, 0.05, 0.4, 2000, Phaser.Easing.Quintic.Out);
+    shipTrail.start(false, 5000, 10);
 }
 
 function update() {
@@ -58,7 +71,10 @@ function update() {
     //  Squish and rotate ship for illusion of "banking"
     bank = player.body.velocity.x / MAXSPEED;
     player.scale.x = 1 - Math.abs(bank) / 2;
-    player.angle = bank * 10;
+    player.angle = bank * 30;
+
+    //  Keep the shipTrail lined up with the ship
+    shipTrail.x = player.x;
 }
 
 function render() {
