@@ -45,6 +45,16 @@ function update() {
         player.body.acceleration.x = ACCLERATION;
     }
 
+    //  Stop at screen edges
+    if (player.x > game.width - 50) {
+        player.x = game.width - 50;
+        player.body.acceleration.x = 0;
+    }
+    if (player.x < 50) {
+        player.x = 50;
+        player.body.acceleration.x = 0;
+    }
+
     //  Squish and rotate ship for illusion of "banking"
     bank = player.body.velocity.x / MAXSPEED;
     player.scale.x = 1 - Math.abs(bank) / 2;
