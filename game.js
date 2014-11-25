@@ -2,6 +2,7 @@ var game = new Phaser.Game(800,600, Phaser.AUTO, 'phaser-demo', {preload: preloa
 
 var player;
 var greenEnemies;
+var blueEnemies;
 var starfield;
 var cursors;
 var bank;
@@ -14,6 +15,7 @@ var shields;
 var score = 0;
 var scoreText;
 var greenEnemyLaunchTimer;
+var blueEnemyLaunchTimer;
 var gameOver;
 
 var ACCLERATION = 600;
@@ -25,6 +27,7 @@ function preload() {
     game.load.image('ship', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/player.png');
     game.load.image('bullet', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/bullet.png');
     game.load.image('enemy-green', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/enemy-green.png');
+    game.load.image('enemy-blue', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/enemy-blue.png');
     game.load.spritesheet('explosion', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/explode.png', 128, 128);
     game.load.bitmapFont('spacefont', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/spacefont/spacefont.png', 'https://rawgit.com/jschomay/phaser-demo-game/master/assets/spacefont/spacefont.xml');  
 }
@@ -77,6 +80,21 @@ function create() {
     });
 
     game.time.events.add(1000, launchGreenEnemy);
+
+    blueEnemies = game.add.group();
+    blueEnemies.enableBody = true;
+    blueEnemies.physicsBodyType = Phaser.Physics.ARCADE;
+    blueEnemies.createMultiple(30, 'enemy-blue');
+    blueEnemies.setAll('anchor.x', 0.5);
+    blueEnemies.setAll('anchor.y', 0.5);
+    blueEnemies.setAll('scale.x', 0.5);
+    blueEnemies.setAll('scale.y', 0.5);
+    blueEnemies.setAll('angle', 180);
+    blueEnemies.forEach(function(enemy){
+        enemy.damageAmount = 40;
+    });
+
+    game.time.events.add(1000, launchBlueEnemy);
 
     //  And some controls to play the game with
     cursors = game.input.keyboard.createCursorKeys();
@@ -178,6 +196,9 @@ function update() {
     game.physics.arcade.overlap(player, greenEnemies, shipCollide, null, this);
     game.physics.arcade.overlap(greenEnemies, bullets, hitEnemy, null, this);
 
+    game.physics.arcade.overlap(player, blueEnemies, shipCollide, null, this);
+    game.physics.arcade.overlap(bullets, blueEnemies, hitEnemy, null, this);
+
     //  Game over?
     if (! player.alive && gameOver.visible === false) {
         gameOver.visible = true;
@@ -256,6 +277,7 @@ function launchGreenEnemy() {
           //  Kill enemies once they go off screen
           if (enemy.y > game.height + 200) {
             enemy.kill();
+            enemy.y = -20;
           }
         }
     }
@@ -264,6 +286,45 @@ function launchGreenEnemy() {
     greenEnemyLaunchTimer = game.time.events.add(game.rnd.integerInRange(MIN_ENEMY_SPACING, MAX_ENEMY_SPACING), launchGreenEnemy);
 }
 
+function launchBlueEnemy() {
+    var startingX = game.rnd.integerInRange(100, game.width - 100);
+    var verticalSpeed = 180;
+    var spread = 60;
+    var frequency = 70;
+    var verticalSpacing = 70;
+    var numEnemiesInWave = 5;
+    var timeBetweenWaves = 7000;
+
+    //  Launch wave
+    for (var i =0; i < numEnemiesInWave; i++) {
+        var enemy = blueEnemies.getFirstExists(false);
+        if (enemy) {
+            enemy.startingX = startingX;
+            enemy.reset(game.width / 2, -verticalSpacing * i);
+            enemy.body.velocity.y = verticalSpeed;
+
+            //  Update function for each enemy
+            enemy.update = function(){
+              //  Wave movement
+              this.body.x = this.startingX + Math.sin((this.y) / frequency) * spread;
+
+              //  Squish and rotate ship for illusion of "banking"
+              bank = Math.cos((this.y + 60) / frequency)
+              this.scale.x = 0.5 - Math.abs(bank) / 8;
+              this.angle = 180 - bank * 2;
+
+              //  Kill enemies once they go off screen
+              if (this.y > game.height + 200) {
+                this.kill();
+                this.y = -20;
+              }
+            };
+        }
+    }
+
+    //  Send another wave soon
+    blueEnemyLaunchTimer = game.time.events.add(timeBetweenWaves, launchBlueEnemy);
+}
 
 function addEnemyEmitterTrail(enemy) {
     var enemyTrail = game.add.emitter(enemy.x, player.y - 10, 100);
@@ -311,6 +372,8 @@ function restart () {
     game.time.events.remove(greenEnemyLaunchTimer);
     game.time.events.add(1000, launchGreenEnemy);
 
+    blueEnemies.callAll('kill');
+    game.time.events.remove(blueEnemyLaunchTimer);
     //  Revive the player
     player.revive();
     player.health = 100;
