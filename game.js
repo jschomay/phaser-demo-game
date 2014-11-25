@@ -1,6 +1,7 @@
 var game = new Phaser.Game(800,600, Phaser.AUTO, 'phaser-demo', {preload: preload, create: create, update: update, render: render});
 
 var player;
+var greenEnemies;
 var starfield;
 var cursors;
 var bank;
@@ -17,6 +18,7 @@ function preload() {
     game.load.image('starfield', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/starfield.png');
     game.load.image('ship', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/player.png');
     game.load.image('bullet', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/bullet.png');
+    game.load.image('enemy-green', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/enemy-green.png');
 }
 
 function create() {
@@ -39,6 +41,21 @@ function create() {
     game.physics.enable(player, Phaser.Physics.ARCADE);
     player.body.maxVelocity.setTo(MAXSPEED, MAXSPEED);
     player.body.drag.setTo(DRAG, DRAG);
+
+    //  The baddies!
+    greenEnemies = game.add.group();
+    greenEnemies.enableBody = true;
+    greenEnemies.physicsBodyType = Phaser.Physics.ARCADE;
+    greenEnemies.createMultiple(5, 'enemy-green');
+    greenEnemies.setAll('anchor.x', 0.5);
+    greenEnemies.setAll('anchor.y', 0.5);
+    greenEnemies.setAll('scale.x', 0.5);
+    greenEnemies.setAll('scale.y', 0.5);
+    greenEnemies.setAll('angle', 180);
+    greenEnemies.setAll('outOfBoundsKill', true);
+    greenEnemies.setAll('checkWorldBounds', true);
+
+    launchGreenEnemy();
 
     //  And some controls to play the game with
     cursors = game.input.keyboard.createCursorKeys();
@@ -132,4 +149,22 @@ function fireBullet() {
             bulletTimer = game.time.now + BULLET_SPACING;
         }
     }
+}
+
+
+function launchGreenEnemy() {
+    var MIN_ENEMY_SPACING = 300;
+    var MAX_ENEMY_SPACING = 3000;
+    var ENEMY_SPEED = 300;
+
+    var enemy = greenEnemies.getFirstExists(false);
+    if (enemy) {
+        enemy.reset(game.rnd.integerInRange(0, game.width), -20);
+        enemy.body.velocity.x = game.rnd.integerInRange(-300, 300);
+        enemy.body.velocity.y = ENEMY_SPEED;
+        enemy.body.drag.x = 100;
+    }
+
+    //  Send another enemy soon
+    game.time.events.add(game.rnd.integerInRange(MIN_ENEMY_SPACING, MAX_ENEMY_SPACING), launchGreenEnemy);
 }
