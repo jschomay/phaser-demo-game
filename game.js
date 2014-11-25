@@ -11,6 +11,8 @@ var bullets;
 var fireButton;
 var bulletTimer = 0;
 var shields;
+var score = 0;
+var scoreText;
 var greenEnemyLaunchTimer;
 var gameOver;
 
@@ -107,6 +109,12 @@ function create() {
         shields.text = 'Shields: ' + Math.max(player.health, 0) +'%';
     };
 
+    //  Score
+    scoreText = game.add.text(10, 10, '', { font: '20px Arial', fill: '#fff' });
+    scoreText.render = function () {
+        scoreText.text = 'Score: ' + score;
+    };
+    scoreText.render();
 
     //  Game over text
     gameOver = game.add.text(game.world.centerX, game.world.centerY, 'GAME OVER!', { font: '84px Arial', fill: '#fff' });
@@ -170,6 +178,7 @@ function update() {
     //  Game over?
     if (! player.alive && gameOver.visible === false) {
         gameOver.visible = true;
+        gameOver.alpha = 0;
         var fadeInGameOver = game.add.tween(gameOver);
         fadeInGameOver.to({alpha: 1}, 1000, Phaser.Easing.Quintic.Out);
         fadeInGameOver.onComplete.add(setResetHandlers);
@@ -286,6 +295,10 @@ function hitEnemy(enemy, bullet) {
     explosion.play('explosion', 30, false, true);
     enemy.kill();
     bullet.kill()
+
+    // Increase score
+    score += enemy.damageAmount * 10;
+    scoreText.render()
 }
 
 
