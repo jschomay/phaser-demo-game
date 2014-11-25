@@ -3,6 +3,7 @@ var game = new Phaser.Game(800,600, Phaser.AUTO, 'phaser-demo', {preload: preloa
 var player;
 var greenEnemies;
 var blueEnemies;
+var enemyBullets;
 var starfield;
 var cursors;
 var bank;
@@ -28,6 +29,7 @@ function preload() {
     game.load.image('bullet', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/bullet.png');
     game.load.image('enemy-green', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/enemy-green.png');
     game.load.image('enemy-blue', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/enemy-blue.png');
+    game.load.image('blueEnemyBullet', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/enemy-blue-bullet.png');
     game.load.spritesheet('explosion', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/explode.png', 128, 128);
     game.load.bitmapFont('spacefont', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/spacefont/spacefont.png', 'https://rawgit.com/jschomay/phaser-demo-game/master/assets/spacefont/spacefont.xml');  
 }
@@ -81,6 +83,22 @@ function create() {
 
     game.time.events.add(1000, launchGreenEnemy);
 
+    //  Blue enemy's bullets
+    blueEnemyBullets = game.add.group();
+    blueEnemyBullets.enableBody = true;
+    blueEnemyBullets.physicsBodyType = Phaser.Physics.ARCADE;
+    blueEnemyBullets.createMultiple(30, 'blueEnemyBullet');
+    blueEnemyBullets.callAll('crop', null, {x: 90, y: 0, width: 90, height: 70});
+    blueEnemyBullets.setAll('alpha', 0.9);
+    blueEnemyBullets.setAll('anchor.x', 0.5);
+    blueEnemyBullets.setAll('anchor.y', 0.5);
+    blueEnemyBullets.setAll('outOfBoundsKill', true);
+    blueEnemyBullets.setAll('checkWorldBounds', true);
+    blueEnemyBullets.forEach(function(enemy){
+        enemy.body.setSize(20, 20);
+    });
+
+    //  More baddies!
     blueEnemies = game.add.group();
     blueEnemies.enableBody = true;
     blueEnemies.physicsBodyType = Phaser.Physics.ARCADE;
@@ -199,6 +217,8 @@ function update() {
     game.physics.arcade.overlap(player, blueEnemies, shipCollide, null, this);
     game.physics.arcade.overlap(bullets, blueEnemies, hitEnemy, null, this);
 
+    game.physics.arcade.overlap(blueEnemyBullets, player, enemyHitsPlayer, null, this);
+
     //  Game over?
     if (! player.alive && gameOver.visible === false) {
         gameOver.visible = true;
@@ -303,6 +323,12 @@ function launchBlueEnemy() {
             enemy.reset(game.width / 2, -verticalSpacing * i);
             enemy.body.velocity.y = verticalSpeed;
 
+            //  Set up firing
+            var bulletSpeed = 400;
+            var firingDelay = 2000;
+            enemy.bullets = 1;
+            enemy.lastShot = 0;
+
             //  Update function for each enemy
             enemy.update = function(){
               //  Wave movement
@@ -312,6 +338,21 @@ function launchBlueEnemy() {
               bank = Math.cos((this.y + 60) / frequency)
               this.scale.x = 0.5 - Math.abs(bank) / 8;
               this.angle = 180 - bank * 2;
+
+              //  Fire
+              enemyBullet = blueEnemyBullets.getFirstExists(false);
+              if (enemyBullet &&
+                  this.alive &&
+                  this.bullets &&
+                  this.y > game.width / 8 &&
+                  game.time.now > firingDelay + this.lastShot) {
+                    this.lastShot = game.time.now;
+                    this.bullets--;
+                    enemyBullet.reset(this.x, this.y + this.height / 2);
+                    enemyBullet.damageAmount = this.damageAmount;
+                    var angle = game.physics.arcade.moveToObject(enemyBullet, player, bulletSpeed);
+                    enemyBullet.angle = game.math.radToDeg(angle);
+                }
 
               //  Kill enemies once they go off screen
               if (this.y > game.height + 200) {
@@ -365,12 +406,24 @@ function hitEnemy(enemy, bullet) {
     scoreText.render()
 }
 
+function enemyHitsPlayer (player, bullet) {
+    var explosion = explosions.getFirstExists(false);
+    explosion.reset(player.body.x + player.body.halfWidth, player.body.y + player.body.halfHeight);
+    explosion.alpha = 0.7;
+    explosion.play('explosion', 30, false, true);
+    bullet.kill();
+
+    player.damage(bullet.damageAmount);
+    shields.render()
+}
+
 
 function restart () {
     //  Reset the enemies
     greenEnemies.callAll('kill');
     game.time.events.remove(greenEnemyLaunchTimer);
     game.time.events.add(1000, launchGreenEnemy);
+    blueEnemyBullets.callAll('kill');
 
     blueEnemies.callAll('kill');
     game.time.events.remove(blueEnemyLaunchTimer);
