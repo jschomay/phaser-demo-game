@@ -20,6 +20,12 @@ var greenEnemyLaunchTimer;
 var greenEnemySpacing = 1000;
 var blueEnemyLaunchTimer;
 var blueEnemyLaunched = false;
+var blueEnemySpacing = 2500;
+var bossLaunchTimer;
+var bossLaunched = false;
+var bossSpacing = 20000;
+var bossBulletTimer = 0;
+var bossYdirection = -1;
 var gameOver;
 
 var ACCLERATION = 600;
@@ -35,6 +41,8 @@ function preload() {
     game.load.image('blueEnemyBullet', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/enemy-blue-bullet.png');
     game.load.spritesheet('explosion', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/explode.png', 128, 128);
     game.load.bitmapFont('spacefont', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/spacefont/spacefont.png', 'https://rawgit.com/jschomay/phaser-demo-game/master/assets/spacefont/spacefont.xml');  
+    game.load.image('boss', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/boss.png');
+    game.load.image('deathRay', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/death-ray.png');
 }
 
 function create() {
@@ -116,6 +124,164 @@ function create() {
         enemy.damageAmount = 40;
     });
 
+    //  The boss
+    boss = game.add.sprite(0, 0, 'boss');
+    boss.exists = false;
+    boss.alive = false;
+    boss.anchor.setTo(0.5, 0.5);
+    boss.damageAmount = 50;
+    boss.angle = 180;
+    boss.scale.x = 0.6;
+    boss.scale.y = 0.6;
+    game.physics.enable(boss, Phaser.Physics.ARCADE);
+    boss.body.maxVelocity.setTo(100, 80);
+    boss.dying = false;
+    boss.finishOff = function() {
+        if (!boss.dying) {
+            boss.dying = true;
+            bossDeath.x = boss.x;
+            bossDeath.y = boss.y;
+            bossDeath.start(false, 1000, 50, 20);
+            //  kill boss after explotions
+            game.time.events.add(1000, function(){
+                var explosion = explosions.getFirstExists(false);
+                var beforeScaleX = explosions.scale.x;
+                var beforeScaleY = explosions.scale.y;
+                var beforeAlpha = explosions.alpha;
+                explosion.reset(boss.body.x + boss.body.halfWidth, boss.body.y + boss.body.halfHeight);
+                explosion.alpha = 0.4;
+                explosion.scale.x = 3;
+                explosion.scale.y = 3;
+                var animation = explosion.play('explosion', 30, false, true);
+                animation.onComplete.addOnce(function(){
+                    explosion.scale.x = beforeScaleX;
+                    explosion.scale.y = beforeScaleY;
+                    explosion.alpha = beforeAlpha;
+                });
+                boss.kill();
+                booster.kill();
+                boss.dying = false;
+                bossDeath.on = false;
+                //  queue next boss
+                bossLaunchTimer = game.time.events.add(game.rnd.integerInRange(bossSpacing, bossSpacing + 5000), launchBoss);
+            });
+
+            //  reset pacing for other enemies
+            blueEnemySpacing = 2500;
+            greenEnemySpacing = 1000;
+
+            //  give some bonus health
+            player.health = Math.min(100, player.health + 40);
+            shields.render();
+        }
+    };
+
+    //  Boss death ray
+    function addRay(leftRight) {
+        var ray = game.add.sprite(leftRight * boss.width * 0.75, 0, 'deathRay');
+        ray.alive = false;
+        ray.visible = false;
+        boss.addChild(ray);
+        ray.crop({x: 0, y: 0, width: 40, height: 40});
+        ray.anchor.x = 0.5;
+        ray.anchor.y = 0.5;
+        ray.scale.x = 2.5;
+        ray.damageAmount = boss.damageAmount;
+        game.physics.enable(ray, Phaser.Physics.ARCADE);
+        ray.body.setSize(ray.width / 5, ray.height / 4);
+        ray.update = function() {
+            this.alpha = game.rnd.realInRange(0.6, 1);
+        };
+        boss['ray' + (leftRight > 0 ? 'Right' : 'Left')] = ray;
+    }
+    addRay(1);
+    addRay(-1);
+    //  need to add the ship texture to the group so it renders over the rays
+    var ship = game.add.sprite(0, 0, 'boss');
+    ship.anchor = {x: 0.5, y: 0.5};
+    boss.addChild(ship);
+
+    boss.fire = function() {
+        if (game.time.now > bossBulletTimer) {
+            var raySpacing = 3000;
+            var chargeTime = 1500;
+            var rayTime = 1500;
+
+            function chargeAndShoot(side) {
+                ray = boss['ray' + side];
+                ray.name = side
+                ray.revive();
+                ray.y = 80;
+                ray.alpha = 0;
+                ray.scale.y = 13;
+                game.add.tween(ray).to({alpha: 1}, chargeTime, Phaser.Easing.Linear.In, true).onComplete.add(function(ray){
+                    ray.scale.y = 150;
+                    game.add.tween(ray).to({y: -1500}, rayTime, Phaser.Easing.Linear.In, true).onComplete.add(function(ray){
+                        ray.kill();
+                    });
+                });
+            }
+            chargeAndShoot('Right');
+            chargeAndShoot('Left');
+
+            bossBulletTimer = game.time.now + raySpacing;
+        }
+    };
+
+    boss.update = function() {
+      if (!boss.alive) return;
+
+      boss.rayLeft.update();
+      boss.rayRight.update();
+
+      if (boss.y > 140) {
+        boss.body.acceleration.y = -50;
+      }
+      if (boss.y < 140) {
+        boss.body.acceleration.y = 50;
+      }
+      if (boss.x > player.x + 50) {
+        boss.body.acceleration.x = -50;
+      } else if (boss.x < player.x - 50) {
+        boss.body.acceleration.x = 50;
+      } else {
+        boss.body.acceleration.x = 0;
+      }
+
+      //  Squish and rotate boss for illusion of "banking"
+      var bank = boss.body.velocity.x / MAXSPEED;
+      boss.scale.x = 0.6 - Math.abs(bank) / 3;
+      boss.angle = 180 - bank * 20;
+
+      booster.x = boss.x + -5 * bank;
+      booster.y = boss.y + 10 * Math.abs(bank) - boss.height / 2;
+
+      //  fire if player is in target
+      var angleToPlayer = game.math.radToDeg(game.physics.arcade.angleBetween(boss, player)) - 90;
+      var anglePointing = 180 - Math.abs(boss.angle);
+      if (anglePointing - angleToPlayer < 18) {
+          boss.fire();
+      }
+    }
+
+    //  boss's boosters
+    booster = game.add.emitter(boss.body.x, boss.body.y - boss.height / 2);
+    booster.width = 0;
+    booster.makeParticles('blueEnemyBullet');
+    booster.forEach(function(p){
+      p.crop({x: 120, y: 0, width: 45, height: 50});
+      //  clever way of making 2 exhaust trails by shifing particles randomly left or right
+      p.anchor.x = game.rnd.pick([1,-1]) * 0.95 + 0.5;
+      p.anchor.y = 0.75;
+    });
+    booster.setXSpeed(0, 0);
+    booster.setRotation(0,0);
+    booster.setYSpeed(-30, -50);
+    booster.gravity = 0;
+    booster.setAlpha(1, 0.1, 400);
+    booster.setScale(0.3, 0, 0.7, 0, 5000, Phaser.Easing.Quadratic.Out);
+    boss.bringToTop();
+
     //  And some controls to play the game with
     cursors = game.input.keyboard.createCursorKeys();
     fireButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
@@ -149,6 +315,14 @@ function create() {
     playerDeath.makeParticles('explosion', [0,1,2,3,4,5,6,7], 10);
     playerDeath.setAlpha(0.9, 0, 800);
     playerDeath.setScale(0.1, 0.6, 0.1, 0.6, 1000, Phaser.Easing.Quintic.Out);
+
+    //  Big explosion for boss
+    bossDeath = game.add.emitter(boss.x, boss.y);
+    bossDeath.width = boss.width / 2;
+    bossDeath.height = boss.height / 2;
+    bossDeath.makeParticles('explosion', [0,1,2,3,4,5,6,7], 20);
+    bossDeath.setAlpha(0.9, 0, 900);
+    bossDeath.setScale(0.3, 1.0, 0.3, 1.0, 1000, Phaser.Easing.Quintic.Out);
 
     //  Shields stat
     shields = game.add.bitmapText(game.world.width - 250, 10, 'spacefont', '' + player.health +'%', 50);
@@ -225,7 +399,11 @@ function update() {
     game.physics.arcade.overlap(greenEnemies, bullets, hitEnemy, null, this);
 
     game.physics.arcade.overlap(player, blueEnemies, shipCollide, null, this);
-    game.physics.arcade.overlap(bullets, blueEnemies, hitEnemy, null, this);
+    game.physics.arcade.overlap(blueEnemies, bullets, hitEnemy, null, this);
+
+    game.physics.arcade.overlap(boss, bullets, hitEnemy, bossHitTest, this);
+    game.physics.arcade.overlap(player, boss.rayLeft, enemyHitsPlayer, null, this);
+    game.physics.arcade.overlap(player, boss.rayRight, enemyHitsPlayer, null, this);
 
     game.physics.arcade.overlap(blueEnemyBullets, player, enemyHitsPlayer, null, this);
 
@@ -350,7 +528,6 @@ function launchBlueEnemy() {
     var frequency = 70;
     var verticalSpacing = 70;
     var numEnemiesInWave = 5;
-    var timeBetweenWaves = 2500;
 
     //  Launch wave
     for (var i =0; i < numEnemiesInWave; i++) {
@@ -401,7 +578,14 @@ function launchBlueEnemy() {
     }
 
     //  Send another wave soon
-    blueEnemyLaunchTimer = game.time.events.add(game.rnd.integerInRange(timeBetweenWaves, timeBetweenWaves + 4000), launchBlueEnemy);
+    blueEnemyLaunchTimer = game.time.events.add(game.rnd.integerInRange(blueEnemySpacing, blueEnemySpacing + 4000), launchBlueEnemy);
+}
+
+function launchBoss() {
+    boss.reset(game.width / 2, -boss.height);
+    booster.start(false, 1000, 10);
+    boss.health = 501;
+    bossBulletTimer = game.time.now + 5000;
 }
 
 function addEnemyEmitterTrail(enemy) {
@@ -441,16 +625,22 @@ function hitEnemy(enemy, bullet) {
     explosion.body.velocity.y = enemy.body.velocity.y;
     explosion.alpha = 0.7;
     explosion.play('explosion', 30, false, true);
-    enemy.kill();
-    bullet.kill()
+    if (enemy.finishOff && enemy.health < 5) {
+      enemy.finishOff();
+    } else {
+        enemy.damage(enemy.damageAmount);
+    }
+    bullet.kill();
 
     // Increase score
     score += enemy.damageAmount * 10;
     scoreText.render();
 
     //  Pacing
+
     //  Enemies come quicker as score increases
     greenEnemySpacing *= 0.9;
+
     //  Blue enemies come in after a score of 1000
     if (!blueEnemyLaunched && score > 1000) {
       blueEnemyLaunched = true;
@@ -458,9 +648,33 @@ function hitEnemy(enemy, bullet) {
       //  Slow green enemies down now that there are other enemies
       greenEnemySpacing *= 2;
     }
+
+    //  Launch boss
+    if (!bossLaunched && score > 15000) {
+        greenEnemySpacing = 5000;
+        blueEnemySpacing = 12000;
+        //  dramatic pause before boss
+        game.time.events.add(2000, function(){
+          bossLaunched = true;
+          launchBoss();
+        });
+    }
+
     //  Weapon upgrade
-    if (score > 4000 && player.weaponLevel < 2) {
+    if (score > 5000 && player.weaponLevel < 2) {
       player.weaponLevel = 2;
+    }
+}
+
+//  Don't count a hit in the lower right and left quarants to aproximate better collisions
+function bossHitTest(boss, bullet) {
+    if ((bullet.x > boss.x + boss.width / 5 &&
+        bullet.y > boss.y) ||
+        (bullet.x < boss.x - boss.width / 5 &&
+        bullet.y > boss.y)) {
+      return false;
+    } else {
+      return true;
     }
 }
 
@@ -491,6 +705,9 @@ function restart () {
     blueEnemies.callAll('kill');
     blueEnemyBullets.callAll('kill');
     game.time.events.remove(blueEnemyLaunchTimer);
+    boss.kill();
+    booster.kill();
+    game.time.events.remove(bossLaunchTimer);
 
     blueEnemies.callAll('kill');
     game.time.events.remove(blueEnemyLaunchTimer);
@@ -508,4 +725,5 @@ function restart () {
     //  Reset pacing
     greenEnemySpacing = 1000;
     blueEnemyLaunched = false;
+    bossLaunched = false;
 }
