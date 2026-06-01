@@ -33,16 +33,16 @@ var DRAG = 400;
 var MAXSPEED = 400;
 
 function preload() {
-    game.load.image('starfield', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/starfield.png');
-    game.load.image('ship', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/player.png');
-    game.load.image('bullet', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/bullet.png');
-    game.load.image('enemy-green', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/enemy-green.png');
-    game.load.image('enemy-blue', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/enemy-blue.png');
-    game.load.image('blueEnemyBullet', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/enemy-blue-bullet.png');
-    game.load.spritesheet('explosion', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/explode.png', 128, 128);
-    game.load.bitmapFont('spacefont', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/spacefont/spacefont.png', 'https://rawgit.com/jschomay/phaser-demo-game/master/assets/spacefont/spacefont.xml');  
-    game.load.image('boss', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/boss.png');
-    game.load.image('deathRay', 'https://raw.githubusercontent.com/jschomay/phaser-demo-game/master/assets/death-ray.png');
+    game.load.image('starfield', 'assets/starfield.png');
+    game.load.image('ship', 'assets/player.png');
+    game.load.image('bullet', 'assets/bullet.png');
+    game.load.image('enemy-green', 'assets/enemy-green.png');
+    game.load.image('enemy-blue', 'assets/enemy-blue.png');
+    game.load.image('blueEnemyBullet', 'assets/enemy-blue-bullet.png');
+    game.load.spritesheet('explosion', 'assets/explode.png', 128, 128);
+    game.load.bitmapFont('spacefont', 'assets/spacefont/spacefont.png', 'assets/spacefont/spacefont.xml');
+    game.load.image('boss', 'assets/boss.png');
+    game.load.image('deathRay', 'assets/death-ray.png');
 }
 
 function create() {
